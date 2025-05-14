@@ -1,0 +1,11 @@
+# IPython notebook checkpoints
+*.ipynb_checkpoints
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+results/*
