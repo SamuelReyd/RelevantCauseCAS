@@ -1,5 +1,6 @@
 from flocking import dim_labels
 from beam_search import beam_search
+from enum import Enum
 
 
 CAUSAL_VAR_REGEX = r"(flock|boid)_([\d]+)_((?:[a-z]|_)+)_([\d]+)"

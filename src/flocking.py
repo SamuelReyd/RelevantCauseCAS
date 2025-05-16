@@ -54,6 +54,22 @@ class Scenarii(Enum):
 # Utils
 ## Utils general
 
+def avoid_round_obstacle(boids, hp):
+    obstacle_pos = np.array([hp["obstacle_x"], hp["obstacle_y"]])
+    vect = obstacle_pos - boids[:,:2]
+    dirs = np.empty(len(boids))
+    dirs = angle(vect)
+    # filter = np.linalg.norm(vect, axis=1) < hp["obstacle_radius"] + hp["view_radius"]
+    # filter &= np.abs(boids[:, 2] - dirs) < np.pi / 2
+    filter = np.logical_and(
+        np.linalg.norm(vect, axis=1) < hp["obstacle_radius"] + hp["view_radius"],
+        np.abs(boids[:,2]-dirs) < pi/2
+    )
+
+    dirs[~filter] = np.nan
+    dirs[filter] += pi/2 * np.sign(boids[filter,2]-dirs[filter])
+    return dirs
+
 def compute_obst_dist(history, hp):
     obstacle_pos = np.array([hp["obstacle_x"], hp["obstacle_y"]])
     dist_to_obstacle = cdist(
@@ -122,6 +138,11 @@ def get_filters(s, params, hp):
     )
     return close_neighbour_filter, regular_neighbour_filter
 
+def angle(x):
+    return (np.arctan2(x.reshape(-1,2)[:,1], x.reshape(-1,2)[:,0]) + 2*pi) % (2*pi)
+
+def direction(angle):
+    return np.stack((np.cos(angle), np.sin(angle)), axis=-1)
 
 def turn(ns, s, close_filter, regular_filter, params, hp):
     if hp["do_padding"]:
@@ -130,6 +151,38 @@ def turn(ns, s, close_filter, regular_filter, params, hp):
     turn_towards(ns, separation(s, close_filter), params[:,5])
     turn_towards(ns, cohesion(s, regular_filter), params[:,4])
     turn_towards(ns, alignment(s, regular_filter), params[:,3])
+
+def turn_towards(boids, target_headings, max_turn):
+    nan_filter = ~np.isnan(target_headings)
+    if not nan_filter.any(): return
+    turns = target_headings[nan_filter] - boids[nan_filter, 2]
+    neg_filter = np.logical_or(np.logical_and(turns < 0, turns > -pi), turns > pi)
+    signs = np.ones_like(turns)
+    signs[neg_filter] = -1  
+    boids[nan_filter, 2] += signs * np.minimum(np.abs(turns), max_turn[nan_filter])
+    boids[nan_filter, 2] %= 2 * np.pi
+
+def separation(boids, neighbour_filter):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mean_neighbours = np.divide(
+            neighbour_filter @ boids[:, :2],
+            neighbour_filter.sum(axis=1, keepdims=True)
+        )
+    vects = - (mean_neighbours - boids[:,:2])
+    return angle(vects)
+
+def alignment(boids, neighbour_filter):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        return np.divide(neighbour_filter @ boids[:, 2], neighbour_filter.sum(axis=1))
+
+def cohesion(boids, neighbour_filter):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        mean_neighbours = np.divide(
+            neighbour_filter @ boids[:, :2],
+            neighbour_filter.sum(axis=1, keepdims=True)
+        )
+    vects = mean_neighbours - boids[:,:2]
+    return angle(vects)
 
 def update_flocks(s, params, hp):
     ns = s.copy()

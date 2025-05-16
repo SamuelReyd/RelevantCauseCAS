@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 def add_dict_value(d, value, keys):
     if len(keys) == 1:
         if keys[0] not in d:
