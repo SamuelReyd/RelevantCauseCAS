@@ -1,4 +1,6 @@
-from flocking import Scenarii, base_hp
+import pickle
+
+from flocking import *
 from cause_identification import FlockVarSCM, FlockParamSCM, FlockBooleanSCM, GranularVarSCM, GranularParamSCM
 from numpy import pi
 
@@ -6,7 +8,7 @@ from numpy import pi
 def load_scms(scenario, prefix="../"):
     try:
         with open(
-            f"{prefix}results_multi_scale/{scenario.value}.pkl", 
+            f"{prefix}results/{scenario.value}.pkl", 
             "rb"
         ) as file:
             scms = pickle.load(file)
@@ -36,138 +38,6 @@ def do_causal_analysis(scms, scenario, prefix="../"):
         ) as file:
             pickle.dump(scms, file)
 
-def illustrate_scms(scms):
-    axes = get_3_axes()
-    for ax, scm in zip(axes,scms):
-        scm.init_structure()
-        var = np.random.choice(scm.variables)
-        ent, i, _, t = break_var(var)
-        boid_ids = get_boid_ids_once(var, scm.flock_mapping)
-        show_boids(
-            scm.actual_run[t], scm.hp, 
-            highlight_ids=boid_ids,ax=ax, title=f'{scm.label}\n{var} (/{len(scm.variables)})'
-        )
-    plt.tight_layout()
-    plt.show()
-
-
-def show_opposite_scores(scm, metric):
-    print(f"SCM: {scm.label}")
-    print(f"Metric: {metric}")
-    cause_labels = ["Worst cause", "Best cause"]
-    scores = scm.scores[metric]
-    videos = []
-    titles = []
-    for idx in (0,-1):
-        i = np.argsort(scores)[idx]
-        videos.append(render_simulation(scm.causes[i][-1], scm.hp))
-        titles.append(
-            show_cause(scm.causes[i], 
-                       scm.variables, 
-                       scm.instance, 
-                       score=scores[i], 
-                       label=f"{cause_labels[idx]}:", 
-                       show=False,
-                       force_line_break=True
-                      )
-        )
-        
-    return HTML(make_animation(videos, titles=titles))
-
-def show_scenarii(scenarii):
-    videos = []
-    titles = []
-    for label, (run, hp) in scenarii.items():
-        titles.append(label)
-        videos.append(render_simulation(run, hp))
-    return HTML(make_animation(videos, titles))
-
-def show_cause(cause, variables, instance, score=None, label="Cause: ", 
-               show=True, force_line_break=False):
-    # Label
-    s = f"{label}"
-    # Line break for long causes
-    if (len(cause[3])>1 or force_line_break) and label:
-        s += "\n"
-    # Repr cause
-    s += '\n'.join([f'{variables[dim]}={instance[dim]:.2f}' for dim in cause[3]])
-    # Line break for long causes
-    if score is not None:
-        if len(cause[3])>1 or force_line_break:
-            s += '\n'
-        s += f" -> {score=:.2f}"
-    if show:
-        print(s) 
-    else:
-        return s
-
-def show_causation_results(causes, all_scores, variables, instance, actual_run, flock_mapping, hp, granularity):
-    print(f"Found {len(causes)} causes.")
-    entities, timesteps, var_names = analyze_causes(causes, variables)
-    plot_causes_analysis(entities, timesteps, var_names)
-    plot_frequent_entities(entities, actual_run[0], flock_mapping, hp, granularity)
-    for name, scores in all_scores.items():
-        best_score_id = np.argmax(scores)
-        show_cause(causes[best_score_id], variables, instance, scores[best_score_id], f"{name}: ")
-
-def compute_results_scaling(factors, actual_run, freq_data, hp, verbose=1):
-    scms = {}
-    # Granular SCMs
-    for cls in (GranularVarSCM, GranularParamSCM):
-        scm = cls(actual_run, hp, freq_data=freq_data)
-        scm.find_causes()
-        scm.compute_scores()
-        scms[scm.get_label()] = scm
-        if verbose:
-            print(f"{scm.get_label()} -> {len(scm.variables)=}, {len(scm.causes)=}")
-        
-    # Coarse SCMs
-    for cls in (FlockVarSCM, FlockParamSCM):
-        for factor in factors:
-            eps = factor * hp["view_radius"]
-            flock_mapping = get_flock_mapping(actual_run, hp, eps)
-            scm = cls(actual_run, hp, 
-                            freq_data=freq_data, 
-                            flock_mapping=flock_mapping, eps=eps)
-            scm.find_causes()
-            scm.compute_scores()
-            scms[scm.get_label()+f"({factor=})"] = scm
-            if verbose:
-                print(f"{scm.get_label()+f"({factor=})"} -> {len(scm.variables)=}, {len(scm.causes)=}")
-    return scms
-
-def get_best_causes(scms):
-    data = []
-    for label, scm in scms.items():
-        scm_data = {}
-        for metric, scores in scm.scores.items():
-            scm_data[metric] = max(scores)
-        data.append(scm_data)
-    return data
-
-def plot_causes_analysis(entities, timesteps, var_names):
-    axes = get_3_axes()
-    plot_entities(entities, axes[0])
-    plot_timesteps(timesteps, axes[1])
-    plot_variables(var_names, axes[2])
-    axes[0].set_ylabel("#cause")
-    plt.tight_layout()
-    plt.show()
-
-def plot_frequent_entities(entities, boids, flock_mapping, hp, granularity):
-    x, y = zip(*Counter(entities).items())
-    ids = sorted(range(len(y)), key=lambda i: y[i], reverse=True)
-    axes = get_3_axes()
-    for i, ax in zip(ids, axes.flatten()):
-        ax.set_title(f"Entity {x[i]} (x{y[i]})")
-        if granularity == Granularity.FLOCK:
-            f_ent = flock_mapping[x[i]]
-        else:
-            f_ent = [x[i]]
-        show_boids(boids, hp, f_ent, ax)
-    plt.tight_layout()
-    plt.show()
-
 def analyze_causes(causes, variables):
     entities, timesteps, var_names = [], [], []
     for cause in causes:
@@ -179,48 +49,25 @@ def analyze_causes(causes, variables):
             var_names.append(v)
     return entities, timesteps, var_names
 
-def plot_entities(entitities, ax):
-    x, y = zip(*Counter(entitities).items())
-    ids = sorted(range(len(y)), key=lambda i: -y[i])
-    x = [str(x[i]) for i in ids]
-    y = [y[i] for i in ids]
-    ax.bar(x,y)
-    ax.set_xlabel("Entitities")
+def get_causes_scenario(scenario):
+    scms = load_scms(scenario, prefix="../")
+    causes, scores, scm_refs = get_causes(scms)
+    return causes, scores, scm_refs, scms
 
-def plot_timesteps(timesteps, ax):
-    x, y = zip(*Counter(timesteps).items())
-    ids = sorted(range(len(x)), key=lambda i: int(x[i]))
-    x = [str(x[i]) for i in ids]
-    y = [y[i] for i in ids]
-    ax.bar(x,y)
-    ax.set_xlabel("Timesteps")
-
-def plot_variables(var_names, ax):
-    x, y = zip(*Counter(var_names).items())
-    ax.tick_params('x', labelrotation=45)
-    x_labels = []
-    for elt in x:
-        x_label = "_".join([s[:3] for s in elt.split("_")])
-        x_labels.append(x_label)
-    ax.bar(x_labels,y)
-    ax.set_xlabel("Variables")
-
-def plot_all_scores(scms):
-    metrics = ("CF score", "Strong Necessity", "Rencency", "Abnormality", "Cost")
-    _, axes = plt.subplots(2,3,figsize=(18,9), sharex=True, sharey=True)
-    
-    for ax, metric in zip(axes.flatten(), metrics):
-        ax.set_title(metric) 
-        for label, scm in scms.items(): 
-            if metric in scm.scores:
-                ax.plot(sorted(scm.scores[metric]), label=label)
-        ax.legend(loc="upper left")
-    for ax in axes.flatten()[len(metrics):]:
-        ax.set_axis_off()
-    plt.tight_layout()
-    plt.savefig("../results_multi_scale/scaling-scores.pdf")
-    plt.show()
-
+def get_causes(scms):
+    causes = []
+    metrics = [m.value for m in Metrics]
+    scores = []
+    scm_refs = []
+    for i, scm in enumerate(scms):
+        if "causes" not in scm.__dict__:
+            continue
+        causes += scm.causes
+        scm.compute_scores()
+        scores.append([scm.scores[metric] for metric in metrics])
+        scm_refs += [i] * len(scm.causes)
+    scores = np.hstack(scores)
+    return causes, scores, scm_refs
 
 # Scenarii
 def get_scenario_1():

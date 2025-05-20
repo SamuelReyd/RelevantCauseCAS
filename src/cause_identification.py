@@ -1,9 +1,12 @@
 from flocking import dim_labels
 from beam_search import beam_search
 from enum import Enum
+from flocking import compute_obst_dist
+from relevance import cost_key, oldness_key, complexity_key
+import numpy as np
 
 
-CAUSAL_VAR_REGEX = r"(flock|boid)_([\d]+)_((?:[a-z]|_)+)_([\d]+)"
+
 
 TIME_GRANULARITY = 5
 SAMPLING_GRANULARITY = 10
@@ -37,14 +40,6 @@ def get_boid_ids_once(causal_var, flock_mapping):
     if agent_type == Granularity.FLOCK.value:
         return flock_mapping[i]
     return [i]
-
-def break_var(causal_var, dim2int=None): 
-    entity, i, dim, t = re.match(CAUSAL_VAR_REGEX, causal_var).groups()
-    if dim2int is not None:
-        if isinstance(dim2int, list):
-            dim2int = {var: i for i, var in enumerate(dim2int)}
-        dim = int(dim2int[dim])
-    return entity, int(i), dim, int(t)
 
 ## Boolean interventions
 def check_single_flock(flock, hp):
@@ -111,6 +106,38 @@ def set_flock_state(boids, boid_ids, hp, flock_id, state):
         # show_boids(boids, hp)
         # plt.show()
         # raise Exception("Intervention failed")
+
+def show_cause(cause, variables, instance, score=None, label="Cause: ", 
+               show=True, force_line_break=True, pred_sep="\n"):
+    # Label
+    s = f"{label}"
+    # Line break for long causes
+    if (len(cause[3])>1 or force_line_break) and label:
+        s += "\n"
+    # Repr cause
+    s += pred_sep.join([f'{variables[dim]}={instance[dim]:.2f}' for dim in cause[3]])
+    # Line break for long causes
+    if score is not None:
+        if force_line_break:
+            s += '\n'
+        if isinstance(score, float):
+            s += f" -> {score=:.2f}"
+        else:
+            s += f" -> {score=}"
+    if show:
+        print(s) 
+    else:
+        return s
+
+def filter_causes(full_causes):
+    sorted_causes = sorted(full_causes, key=key)
+    i = 0
+    while i < len(sorted_causes)-1:
+        if sorted_causes[i][3] == sorted_causes[i+1][3]:
+            del sorted_causes[i+1]
+        else:
+            i += 1
+    return sorted_causes
 
 ## SCM
 class SCM:

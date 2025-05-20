@@ -5,7 +5,7 @@ from sklearn.cluster import DBSCAN
 from IPython.display import HTML
 from tqdm import tqdm
 from enum import Enum
-from scipy.spatial.distance import squareform, pdist
+from scipy.spatial.distance import squareform, pdist, cdist
 
 from utils import *
 
@@ -143,6 +143,30 @@ def angle(x):
 
 def direction(angle):
     return np.stack((np.cos(angle), np.sin(angle)), axis=-1)
+
+def avoid_edges(boids, hp):
+    dirs = np.full(len(boids), np.nan)
+    dirs[boids[:,1] > hp["height"] - hp["padding"]] = 3*pi/2
+    dirs[boids[:,1] < hp["padding"]] = pi/2
+    dirs[boids[:,0] > hp["width"] - hp["padding"]] = pi
+    dirs[boids[:,0] < hp["padding"]] = 0
+    dirs[np.logical_and(
+        boids[:,0] < hp["padding"], 
+        boids[:,1] < hp["padding"]
+    )] = pi/4
+    dirs[np.logical_and(
+        boids[:,0] < hp["padding"], 
+        boids[:,1] > hp["height"] - hp["padding"]
+    )] = 7*pi/4
+    dirs[np.logical_and(
+        boids[:,0] > hp["width"] - hp["padding"], 
+        boids[:,1] < hp["padding"]
+    )] = 3*pi/4
+    dirs[np.logical_and(
+        boids[:,0] > hp["width"] - hp["padding"], 
+        boids[:,1] > hp["height"] - hp["padding"]
+    )] = 5*pi/4
+    return dirs
 
 def turn(ns, s, close_filter, regular_filter, params, hp):
     if hp["do_padding"]:
