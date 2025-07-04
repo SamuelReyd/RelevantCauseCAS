@@ -1,8 +1,15 @@
-import pickle
+import pickle, sys
 
 from flocking import *
-from cause_identification import FlockVarSCM, FlockParamSCM, FlockBooleanSCM, GranularVarSCM, GranularParamSCM
+from cause_identification import FlockVarSCM, FlockParamSCM, FlockBooleanSCM, GranularVarSCM, GranularParamSCM, Metrics
 from numpy import pi
+
+## Fixes for solving pickle errors
+sys.modules['__main__'].FlockVarSCM = FlockVarSCM
+sys.modules['__main__'].FlockParamSCM = FlockParamSCM
+sys.modules['__main__'].FlockBooleanSCM = FlockBooleanSCM
+sys.modules['__main__'].GranularVarSCM = GranularVarSCM
+sys.modules['__main__'].GranularParamSCM = GranularParamSCM
 
 ## Result plotting
 def load_scms(scenario, prefix="../"):

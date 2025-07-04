@@ -1,3 +1,14 @@
+from flocking import get_first_hit, Scenarii, show_boids, show_simulation
+from cause_identification import Metrics, Granularity, CausalObservation, show_cause
+from utils import get_3_axes
+from experiments import get_causes_scenario, load_scms, get_causes
+from filtering import digitalize_cost, sort_causes_priority
+
+import numpy as np, matplotlib.pyplot as plt, pandas as pd
+from collections import Counter
+
+metrics = [m.value for m in Metrics]
+
 def illustrate_scms(scms):
     axes = get_3_axes()
     for ax, scm in zip(axes,scms):
@@ -206,3 +217,105 @@ def show_results(scenario, show_sim=False, show_distr=False,
             ids = sort_causes_priority(s, priority)[:n]
             show_filtered_causes(causes, scores, scm_refs, scms, ids)
         print()
+
+def render_cost_distributions(prefix="../"):
+    axes = get_3_axes()
+    
+    for ax, scenario in zip(axes, (Scenarii.ONE_FLOCK, Scenarii.FUSION, Scenarii.FREE)):
+        causes, scores, scm_refs, scms = get_causes_scenario(scenario) 
+        ax.set_title(scenario.value)
+        ax.boxplot(
+            [scm.scores[Metrics.COST.value] for scm in scms], 
+            vert=True, patch_artist=True,
+            boxprops=dict(facecolor="lightblue", color="black"),
+            whiskerprops=dict(color="black"),
+            capprops=dict(color="black"),
+            medianprops=dict(color="red")
+        )
+        
+        ax.set_xticks(range(len(scms)), [scm_label(scm) for scm in scms])
+        ax.tick_params('x', rotation=45)
+    axes[0].set_ylabel("Intervention cost")
+    plt.tight_layout()
+    plt.savefig(prefix+"results/cost_distributions.pdf")
+    plt.show()
+
+v2l = {
+    CausalObservation.BOOLEAN: "Bool.", 
+    CausalObservation.PARAMS: "Param.", 
+    CausalObservation.VARS: "Var."
+}
+a2l = {
+    Granularity.BOID: "Agent",
+    Granularity.FLOCK: "Flock"
+}
+
+def scm_label(scm):
+    return "-".join([
+            a2l[scm.entity_type], v2l[scm.obs_type]
+        ])
+
+def render_distributions(metric, prefix="../"):
+    if metric == Metrics.COMPLEXITY:
+        legend_title = 'Cause length'
+        save_name = "length"
+        values = np.arange(4,12)
+    else:
+        legend_title = 'Time to collision'
+        save_name = 'oldness'
+        values = None
+    axes = get_3_axes(sharey=True)
+    for ax, scenario in zip(axes, (Scenarii.ONE_FLOCK, Scenarii.FUSION, Scenarii.FREE)):
+        causes, scores, scm_refs, scms = get_causes_scenario(scenario) 
+        if metric == Metrics.OLDNESS:
+            scm = scms[0]
+            first_hit = get_first_hit(scm.actual_run, scm.hp)
+            steps = scm.get_intervention_steps()
+            values = first_hit - steps
+        ax.set_title(scenario.value)
+        bars = np.zeros((len(values),5))
+        # bars = [[] for i in range(4)]
+        x_ticks = []
+        for i, scm in enumerate(scms):
+            x_ticks.append(scm_label(scm))
+            counter = Counter(scm.scores[metric.value])
+            for j, value in enumerate(values):
+                n = counter[value]
+                bars[j, i] = n
+        bar_width = 0.8 / len(values)
+        index = np.arange(len(x_ticks))
+        for i, bars_i in enumerate(bars):
+            ax.bar(index + i*bar_width, bars_i, bar_width, label=values[i])#f'Cause size={i+1}')
+        ax.set_xticks(index, x_ticks)
+        ax.tick_params("x", rotation=45)
+        ax.set_yscale("log")
+        ax.legend(title=legend_title, ncol=2, fontsize=7, title_fontsize=9)
+    axes[0].set_ylabel("#causes")
+    plt.tight_layout()
+    plt.savefig(prefix+f"results/{save_name}_distribution.pdf")
+    plt.show()
+
+def get_n_causes():
+    data = []
+    columns = []
+    index = []
+    for scenario in (Scenarii.ONE_FLOCK, Scenarii.FUSION, Scenarii.FREE):
+        data.append([])
+        index.append(scenario.value)
+        causes, scores, scm_refs, scms = get_causes_scenario(scenario)
+        for scm in scms:
+            data[-1].append(len(scm.causes))
+            columns.append(scm.__class__.__name__)
+    return pd.DataFrame(data, index=index, columns=columns[:5])
+
+def get_states(scenario, prefix):
+    scms = load_scms(scenario)
+    run = scms[0].actual_run
+    hp = scms[0].hp
+    first_hit = get_first_hit(run, hp)
+    axes = get_3_axes()
+    show_boids(run[0], hp, ax=axes[0], title="Initial state")
+    show_boids(run[first_hit], hp, ax=axes[1], title="Time of collision")
+    show_boids(run[-1], hp, ax=axes[2], title="Final state")
+    plt.tight_layout()
+    plt.savefig(prefix+f"results/states_{scenario.value}.pdf")

@@ -26,5 +26,9 @@ def oldness_key(rule_value, variables, ref_time):
 def cost_key(rule_values):
     return rule_values[2][1]
 
-def complexity_key(rule_value):
-    return len(rule_value[0])
+def complexity_key(rule_value, variables):
+    desc_elts = set()
+    for dim in rule_value[3]:
+        var = variables[dim]
+        desc_elts |= set(break_var(var))
+    return len(desc_elts)

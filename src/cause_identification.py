@@ -1,5 +1,5 @@
 from flocking import dim_labels
-from beam_search import beam_search
+from actualcauses import beam_search
 from enum import Enum
 from flocking import compute_obst_dist
 from relevance import cost_key, oldness_key, complexity_key
@@ -193,7 +193,7 @@ class SCM:
                 )[:,0].min()
                 return oldness_key(cause, self.variables, first_hit)
             case Metrics.COMPLEXITY:
-                return complexity_key(cause)
+                return complexity_key(cause, self.variables)
 
     def show_causation_results(self):
         show_causation_results(self.causes, self.scores, self.variables, 

@@ -1,3 +1,5 @@
+import numpy as np
+
 def get_rouded_values(data, bins=20):
     bins = np.logspace(np.log10(data.min()), np.log10(data.max()), num=bins + 1)
     bin_indices = np.digitize(data, bins)
