@@ -40,7 +40,7 @@ def do_causal_analysis(scms, scenario, prefix="../"):
         if "scores" not in scm.__dict__:
             scm.compute_scores()
         with open(
-            f"{prefix}results_multi_scale/{scenario.value}.pkl", 
+            f"{prefix}results/{scenario.value}.pkl", 
             "wb"
         ) as file:
             pickle.dump(scms, file)
@@ -99,7 +99,7 @@ def get_scenario_1():
     }
     # Initialize boids
     boids = init_boids_uniform(hp, min_y=(2*hp["height"])//3)
-    history = make_run_flocking(boids, hp)
+    history = make_run_flocking(0, boids, hp)
     full_actual_run = np.stack(history)
     return full_actual_run, hp
 
@@ -157,7 +157,7 @@ def get_scenario_3():
     }
     # Initialize boids
     boids = init_boids_clash(hp)
-    history = make_run_flocking(boids, hp)
+    history = make_run_flocking(0, boids, hp)
     full_actual_run = np.stack(history)
     return full_actual_run, hp
 

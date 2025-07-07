@@ -2,7 +2,10 @@ import matplotlib.colors as colors, matplotlib.animation as animation, matplotli
 import pygame, numpy as np
 
 from sklearn.cluster import DBSCAN
-from IPython.display import HTML
+try:
+    from IPython.display import HTML
+except ModuleNotFoundError:
+    pass
 from tqdm import tqdm
 from enum import Enum
 from scipy.spatial.distance import squareform, pdist, cdist
