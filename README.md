@@ -1,6 +1,6 @@
 # RelevantCauseCAS
 
-This is the repository for the implementations of the paper [*Finding relevant causes in complex systems: A generic method adaptable to users and contexts*](Link comming soon, paper accepted at ACSOS 2025).
+This is the repository for the implementations of the paper [*Finding relevant causes in complex systems: A generic method adaptable to users and contexts*]([Link comming soon, paper accepted at ACSOS 2025](https://ieeexplore.ieee.org/abstract/document/11217769)).
 
 ## About this project
 
@@ -26,4 +26,8 @@ To reproduce the experiment from the paper, run:
 
 If you use this code for an academic work, please use the following citation:
 
-Comming soon... The paper has been accepted to ACSOS 2025.
+Text:
+> S. Reyd, A. Diaconescu and J. -L. Dessalles, "Finding Relevant Causes in Complex Systems: a Generic Method Adaptable to Users and Contexts," 2025 IEEE International Conference on Autonomic Computing and Self-Organizing Systems (ACSOS), Tokyo, Japan, 2025, pp. 100-111, doi: 10.1109/ACSOS66086.2025.00026.
+
+BibTex:
+> @INPROCEEDINGS{11217769,author={Reyd, Samuel and Diaconescu, Ada and Dessalles, Jean-Louis},booktitle={2025 IEEE International Conference on Autonomic Computing and Self-Organizing Systems (ACSOS)},title={Finding Relevant Causes in Complex Systems: a Generic Method Adaptable to Users and Contexts},year={2025},pages={100-111},doi={10.1109/ACSOS66086.2025.00026}}
