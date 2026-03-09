@@ -1,6 +1,6 @@
 # RelevantCauseCAS
 
-This is the repository for the implementations of the paper [*Finding relevant causes in complex systems: A generic method adaptable to users and contexts*]([Link comming soon, paper accepted at ACSOS 2025](https://ieeexplore.ieee.org/abstract/document/11217769)).
+This is the repository for the implementations of the paper [*Finding relevant causes in complex systems: A generic method adaptable to users and contexts*](https://ieeexplore.ieee.org/abstract/document/11217769).
 
 ## About this project
 
